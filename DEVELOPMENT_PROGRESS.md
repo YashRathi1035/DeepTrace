@@ -5,7 +5,7 @@
 - **Phase 2: Deepfake Detection Model and Training Pipeline** — **COMPLETED**
 - **Phase 3: Video Forensics, Frame Analysis, and Temporal Evidence** — **COMPLETED**
 - **Phase 4: Explainable AI and Forensic Evidence Collection** — **COMPLETED**
-- **Phase 5: Reliability, Calibration, and Research Experiments** — PENDING
+- **Phase 5: Reliability, Calibration, and Research Experiments** — **COMPLETED**
 - **Phase 6: Streamlit Application and Forensic Report Generation** — PENDING
 - **Phase 7: Integration, Testing, Optimization, Documentation, and Release** — PENDING
 
@@ -27,46 +27,55 @@
 ---
 
 ## Phase 4 Execution Record
+*(See previous record for Grad-CAM explainability, quality diagnostics, evidence records, and 23 passed tests).*
+
+---
+
+## Phase 5 Execution Record
 
 ### Objectives
-- Implement Grad-CAM visual explainability for CNN backbones.
-- Probe target convolutional layers (`features[-1]` in EfficientNet-B0, `layer4[-1]` in ResNet-18).
-- Generate class-discriminative saliency heatmaps, normalize to $[0.0, 1.0]$, and blend with original face crops.
-- Build comprehensive forensic quality evaluation and input diagnostics.
-- Implement structured forensic evidence record collection dividing findings into:
-  1. Model-Generated Findings
-  2. File & Container Observations
-  3. Forensic Limitations & Quality Caveats
-- Export machine-readable JSON evidence records.
-- Implement automated unit tests (`tests/test_gradcam.py`).
+- Develop confidence calibration via Temperature Scaling on validation logits.
+- Compute Expected Calibration Error (ECE) and Brier Score using equal-width binning.
+- Render publication-quality Reliability Diagrams comparing confidence vs. empirical accuracy.
+- Design uncertainty-aware selective prediction & abstention policy:
+  - Likely Authentic, Potentially Manipulated, or Inconclusive (Abstain).
+- Measure Coverage vs. Selective Risk tradeoff.
+- Implement controlled robustness stress-tests (JPEG compression, Gaussian blur, downsampling, Gaussian noise).
+- Implement cross-dataset generalization benchmark (`evaluation/cross_dataset.py`).
+- Implement master evaluation CLI generating calibration artifacts, plots, and ablation comparison table (`scripts/evaluate_model.py`).
+- Automated unit testing in `tests/test_calibration.py`.
 
 ### Deliverables Completed
-1. **Grad-CAM Explainability Engine (`explainability/gradcam.py`)**:
-   - `GradCAM`: Registers forward and full-backward hooks on the target convolutional layer.
-   - `generate_cam()`: Calculates global average pooled gradients $\alpha_k$, takes ReLU of weighted feature activations, upsamples to input resolution, and min-max normalizes to $[0.0, 1.0]$.
-   - `overlay_heatmap()`: Blends raw heatmap with OpenCV color mapping (`COLORMAP_JET`) over original BGR crop at configurable alpha transparency.
-   - `generate_explanation()`: Unified wrapper generating heatmaps, overlays, and saving PNG artifacts.
-   - Clean hook management (`remove_hooks()`) to eliminate GPU/CPU memory leaks.
-2. **Forensic Quality Diagnostics (`forensic/quality.py`)**:
-   - `evaluate_face_quality()`: Multidimensional assessment incorporating Laplacian blur variance, grayscale luminance balance, and facial crop resolution.
-   - Generates composite quality score $[0.0, 1.0]$ and explicit diagnostic warning flags.
-3. **Evidence Record Compiler & Exporter (`forensic/report.py`)**:
-   - `build_evidence_record()`: Aggregates cryptographic SHA-256 hash, container metadata, model scores, Grad-CAM artifact paths, and standard ethical disclaimers.
-   - Strictly separates model predictions from physical file observations and explicit limitations.
-   - `export_evidence_json()`: Exports formatted JSON forensic records for archiving and downstream PDF generation.
-4. **Automated Unit Tests (`tests/test_gradcam.py`)**:
-   - 5 comprehensive tests: Grad-CAM generation & normalization, heatmap blending, artifact saving, blur quality detection, and evidence record serialization.
-   - Total test suite now: **23 passed in 8.71s (100% pass rate)**.
+1. **Confidence Calibration (`forensic/calibration.py`)**:
+   - `TemperatureScaler`: Optimized parameter $T > 0$ using L-BFGS to minimize Negative Log-Likelihood (NLL) strictly on validation data.
+   - Saves calibrated temperature artifact to `artifacts/checkpoints/calibration.json`.
+   - `compute_ece()`: Computes Expected Calibration Error across $M=10$ equal-width bins and Brier score.
+   - `plot_reliability_diagram()`: Plots empirical calibration curve vs. perfect diagonal and bin count histogram.
+2. **Reliability Decision Policy (`forensic/calibration.py`)**:
+   - `ReliabilityDecisionPolicy`: Implements three-tier classification with explicit quality gating:
+     - Calibrated prob $\ge 0.65$ $\rightarrow$ Potentially Manipulated.
+     - Calibrated prob $\le 0.35$ $\rightarrow$ Likely Authentic.
+     - Ambiguous zone $[0.35, 0.65]$ or visual quality degradation $\rightarrow$ Inconclusive (Abstain).
+   - `evaluate_selective_risk()`: Quantifies Coverage ($N_{\text{decisive}} / N$), Selective Risk (error rate among accepted inputs), and Abstention Rate.
+3. **Robustness Stress-Testing (`evaluation/robustness.py`)**:
+   - Controlled transformations: JPEG compression ($Q=90, 50, 30$), Gaussian blur ($\sigma=1.0, 2.0$), downsampling ($0.50\times, 0.35\times$), Gaussian sensor noise ($\sigma=15$).
+   - `RobustnessBenchmark`: Tracks degradation of accuracy, ROC-AUC, ECE, and abstention under increasing perturbation severity.
+   - `plot_robustness_curves()`: Generates degradation curves saved to `artifacts/plots/robustness_curves.png`.
+4. **Cross-Dataset Benchmark (`evaluation/cross_dataset.py`)**:
+   - `run_cross_dataset_benchmark()`: Evaluates generalization drop ($\Delta \text{AUC}$, $\Delta \text{Accuracy}$, change in ECE) between in-domain and external test cohorts.
+5. **Master Evaluation Pipeline (`scripts/evaluate_model.py`)**:
+   - Automated CLI running validation calibration, test set ECE evaluation, reliability plotting, robustness stress-testing, and generating the research ablation table saved to `artifacts/reports/ablation_study.csv`.
+6. **Automated Unit Tests (`tests/test_calibration.py`)**:
+   - 5 comprehensive tests: Temperature scaling optimization, ECE calculation, 3-tier decision policy, selective risk evaluation, and perturbation array preservation.
+   - Total test suite now: **28 passed in 15.51s (100% pass rate)**.
 
 ---
 
 ## Remaining Work and Next Phase Plan
-- **Next Phase: Phase 5 — Reliability, Calibration, and Research Experiments**
-  - Confidence calibration via Temperature Scaling on validation data.
-  - Expected Calibration Error (ECE) computation with documented binning strategy.
-  - Reliability diagrams (binned accuracy vs. confidence calibration curves).
-  - Selective prediction & abstention policy: Likely Authentic, Potentially Manipulated, or Inconclusive.
-  - Coverage vs. Selective Risk evaluation.
-  - Robustness experiments under perturbations (JPEG compression, Gaussian blur, resizing).
-  - Cross-dataset evaluation protocol and ablation studies.
-  - Unit tests in `tests/test_calibration.py`.
+- **Next Phase: Phase 6 — Streamlit Application and Forensic Report Generation**
+  - Page 1: Home & Forensic Overview (workflow, limitations, supported inputs).
+  - Page 2: Image Forensics (upload, preview, metadata/hash, inference, Grad-CAM overlay, download report).
+  - Page 3: Video Forensics (upload, sampling slider, timeline chart, per-frame viewer, suspicious frame inspect).
+  - Page 4: Forensic Evidence Report (tamper-evident PDF export via ReportLab, structured JSON).
+  - Page 5: Evaluation & Research Dashboard (metrics, confusion matrix, reliability diagram, robustness curves, ablation table).
+  - Reusable UI component library (`ui/components.py`, `ui/pages.py`, `app.py`).

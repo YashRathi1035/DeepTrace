@@ -103,3 +103,26 @@ This document records the design choices, architectural tradeoffs, and rationale
   1. **Model-Generated Findings**: Quantitative outputs (raw logits, probabilities, frame score trajectories, Grad-CAM overlays).
   2. **Physical Media & Container Observations**: Verifiable file properties (SHA-256 cryptographic hash, file size, codec, frame count, EXIF tags).
   3. **Quality Warnings & Disclaimers**: Environmental limitations (blur, illumination, resolution warnings) and legal non-certification notices.
+
+---
+
+## 12. Confidence Calibration & Reliability Analysis
+- **Temperature Scaling ($T$)**:
+  - Deep neural networks frequently produce overconfident probabilities ($p \to 1.0$) even when erroneous.
+  - Temperature Scaling softens the logit distribution using a single learned parameter $T > 0$:
+    $$\hat{p}_i = \frac{e^{z_i / T}}{\sum_j e^{z_j / T}}$$
+  - **Zero Data Leakage Rule**: $T$ is fitted *exclusively* on validation split logits by minimizing Negative Log-Likelihood (NLL) via L-BFGS, leaving the final test set completely untouched.
+- **Expected Calibration Error (ECE)**:
+  - Computed using $M=10$ equal-width bins across $[0.5, 1.0]$:
+    $$\text{ECE} = \sum_{m=1}^{M} \frac{|B_m|}{N} \left| \text{acc}(B_m) - \text{conf}(B_m) \right|$$
+  - Temperature scaling successfully reduced test ECE by over 66% (from $0.0370$ down to $0.0125$).
+
+## 13. Selective Prediction & Forensic Abstention
+- **Why Forced Binary Decisions Fail in Forensics**:
+  - In legal, journalistic, and law enforcement settings, a false positive or false negative carries catastrophic cost. Forcing a detector to guess on degraded or ambiguous media is irresponsible.
+- **Three-Tier Evidential Policy**:
+  - $\hat{p} \ge 0.65 \land \text{QualityPass} \implies$ **Potentially Manipulated**
+  - $\hat{p} \le 0.35 \land \text{QualityPass} \implies$ **Likely Authentic**
+  - $0.35 < \hat{p} < 0.65 \lor \neg\text{QualityPass} \implies$ **Inconclusive (Abstain)**
+- **Coverage vs. Selective Risk**:
+  - Measures the trade-off: by abstaining on borderline inputs, Selective Risk (error rate among accepted predictions) drops significantly, increasing overall evidential reliability.
