@@ -33,3 +33,26 @@ This document records the design choices, architectural tradeoffs, and rationale
   - `create_split_manifest` partitions data strictly at the **video/subject level** (`video_id`). Frames originating from a given video ID will never cross between training, validation, and test splits.
 - **Synthetic Testing Fixtures**:
   - Added `--create-fixture` in `scripts/prepare_dataset.py` allowing complete software and pipeline verification on synthetic test media without requiring gigabytes of external dataset downloads for software testing.
+
+---
+
+## 5. Model Architecture & Backbones
+- **Primary Baseline (EfficientNet-B0)**:
+  - Selected for its high parameter efficiency (~5.3M parameters) and proven sensitivity to high-frequency artifacts (blending boundaries, compression mismatches).
+  - The default ImageNet 1000-class head was replaced with a forensic binary head: `nn.Sequential(nn.Dropout(p=0.2), nn.Linear(1280, 2))`.
+  - Exposes `get_target_layer()` pointing to `features[-1]` (`features.8`) for Grad-CAM explainability in Phase 4.
+- **Comparison Baseline (ResNet-18)**:
+  - Included as a standard lightweight CNN baseline (~11.2M parameters) with residual connections.
+  - Final classification layer replaced with `nn.Linear(512, 2)`.
+  - Target layer points to `layer4[-1]`.
+
+## 6. Training Dynamics & Compute Optimization
+- **Mixed Precision (AMP)**:
+  - Enabled `torch.amp.autocast("cuda")` with `torch.amp.GradScaler("cuda")` on the RTX 4050 GPU.
+  - Accelerates epoch execution time by ~4x while preventing GPU VRAM exhaustion.
+- **Class Imbalance Handling**:
+  - Training pipeline dynamically computes inverse frequency weights per class and integrates them into `nn.CrossEntropyLoss(weight=class_weights)` to prevent bias toward dominant classes.
+- **Validation-Driven Checkpoint Selection**:
+  - Checkpoint saving prioritizes **validation ROC-AUC** and validation loss rather than raw training accuracy to prevent overfitting.
+- **Multiplatform Worker Safety**:
+  - On Windows, `DataLoader(num_workers=0)` is used as the default for training scripts to eliminate Windows process spawning deadlocks.

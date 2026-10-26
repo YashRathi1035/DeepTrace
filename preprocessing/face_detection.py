@@ -106,6 +106,18 @@ class MediaPipeFaceDetector(BaseFaceDetector):
 
         return detections
 
+    def close(self):
+        """Cleanly close underlying detector resources."""
+        if hasattr(self, "detector") and self.detector is not None:
+            try:
+                self.detector.close()
+            except Exception:
+                pass
+            self.detector = None
+
+    def __del__(self):
+        self.close()
+
 
 class FallbackCenterFaceDetector(BaseFaceDetector):
     """Fallback detector that extracts a centered square region when no deep face detector is available."""

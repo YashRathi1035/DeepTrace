@@ -2,7 +2,7 @@
 
 ## Status Overview
 - **Phase 1: Project Setup, Architecture, Dataset Pipeline, and Baseline Preparation** — **COMPLETED**
-- **Phase 2: Deepfake Detection Model and Training Pipeline** — PENDING
+- **Phase 2: Deepfake Detection Model and Training Pipeline** — **COMPLETED**
 - **Phase 3: Video Forensics, Frame Analysis, and Temporal Evidence** — PENDING
 - **Phase 4: Explainable AI and Forensic Evidence Collection** — PENDING
 - **Phase 5: Reliability, Calibration, and Research Experiments** — PENDING
@@ -12,44 +12,55 @@
 ---
 
 ## Phase 1 Execution Record
+*(See previous commit / record for full Phase 1 setup and 10 passed tests).*
+
+---
+
+## Phase 2 Execution Record
 
 ### Objectives
-- Configure runtime environment, inspect hardware/CUDA capabilities.
-- Establish modular directory structure, configuration file, logging, and seed controls.
-- Implement cryptographic hashing and digital media metadata inspection.
-- Build face detection and crop extraction with context margins and fallbacks.
-- Build memory-safe video frame streaming and temporal sampling.
-- Implement dataset manifest generation and audit tools with video/subject-level leakage-free split isolation.
-- Develop unit tests and verify baseline preprocessing readiness.
+- Implement trainable image-level deepfake classifier using `EfficientNet-B0` with custom binary head.
+- Implement `ResNet18` as a lightweight comparison baseline.
+- Support configurable image dimensions, batch size, learning rate, optimizer, early stopping, and class weighting.
+- Support PyTorch Automatic Mixed Precision (AMP) on CUDA and CPU fallback.
+- Save best checkpoint, training history, hyperparameters, and diagnostic plots (loss, accuracy, confusion matrix, ROC/PR).
+- Implement reusable `DeepfakeDetector` inference engine with structured prediction dictionary.
+- Verify through unit tests and actual training executions.
 
 ### Deliverables Completed
-1. **Environment & Verification**:
-   - Python 3.11.6, NVIDIA GeForce RTX 4050 Laptop GPU (6GB VRAM), CUDA 12.1, PyTorch 2.5.1+cu121.
-   - Verified OpenCV, MediaPipe Tasks, PyYAML, Pandas, Scikit-learn, ReportLab, Streamlit, PyTest.
-2. **Modular Architecture & Config**:
-   - `configs/config.yaml` specifying hardware settings, image sizes, face margins, video sampling rate, and paths.
-   - `configs/__init__.py` providing `load_config`, `set_seed`, and structured `get_logger`.
-3. **Forensic Metadata Inspection**:
-   - `forensic/metadata.py`: SHA-256 calculation, EXIF parser, video container decoder (fps, frame count, fourcc codec, duration).
-4. **Face Extraction & Alignment Pipeline**:
-   - `preprocessing/face_detection.py`: Abstract `BaseFaceDetector`, `MediaPipeFaceDetector` (with LiteRT/XNNPACK acceleration and local model asset), `FallbackCenterFaceDetector`, margin expansion (`crop_face_with_margin`).
-   - `preprocessing/image_processor.py`: Image loading, Laplacian blur sharpness check, brightness & resolution checks, ImageNet tensor normalization, tensor denormalization.
-5. **Video Frame Processor**:
-   - `preprocessing/video_processor.py`: Streaming generator yielding sampled frames at target FPS without loading entire videos into memory; face crop extraction and timestamp association.
-6. **Dataset & Manifest Pipeline**:
-   - `preprocessing/dataset.py`: `DeepfakeFaceDataset`, custom augmentations (spatial, Gaussian blur, JPEG re-compression simulation), and `create_split_manifest` with subject/video-level split isolation.
-   - `scripts/prepare_dataset.py`: CLI to extract face crops from media or generate synthetic software fixtures.
-   - `scripts/validate_dataset.py`: CLI auditing dataset manifests, verifying file existence, zero-byte corruption checks, class balance, and cross-split leakage prevention.
-7. **Automated Unit Testing**:
-   - `tests/test_preprocessing.py`: 6 tests passing.
-   - `tests/test_video_processing.py`: 4 tests passing.
-   - Total: 10/10 tests passed (100% pass rate).
+1. **Model Architectures (`models/detector.py`)**:
+   - `EfficientNetB0Detector`: Pretrained backbone with custom dropout and binary classification layer `Linear(1280, 2)`. Features `get_target_layer()` for Grad-CAM.
+   - `ResNet18Detector`: Lightweight comparison baseline with `Linear(512, 2)` head.
+   - `build_detector()`: Factory function validating architecture configurations.
+2. **Checkpoint Manager (`models/checkpoint.py`)**:
+   - `save_checkpoint`: Preserves weights, optimizer states, epoch, metrics, and complete hyperparameter configs.
+   - `load_checkpoint`: Reconstructs model architecture and restores weights with CPU/CUDA device mapping.
+3. **Training & Validation Engine (`models/train.py`)**:
+   - PyTorch Automatic Mixed Precision (`torch.amp.autocast("cuda")` and `torch.amp.GradScaler("cuda")`).
+   - Weighted CrossEntropyLoss for class imbalance.
+   - Learning rate scheduling with `ReduceLROnPlateau`.
+   - Early stopping tracking validation AUC and loss.
+   - Checkpoint selection saving `best_model.pt`.
+   - Automatic generation of training curves and confusion matrix plots.
+4. **Forensic Inference Interface (`models/predict.py`)**:
+   - `DeepfakeDetector`: Reusable class with `predict_image`, `predict_frame`, and `predict_batch`.
+   - Structured output containing: `predicted_class`, `manipulation_score` (prob of fake), `confidence`, `raw_scores` (logits), `inference_time_ms`, and `preprocessing_info`.
+5. **Evaluation Metrics & Plotting (`evaluation/metrics.py`, `evaluation/plots.py`)**:
+   - `compute_metrics`: Accuracy, macro and per-class Precision/Recall/F1, Confusion Matrix, ROC-AUC, Average Precision (PR-AUC), and Brier Score.
+   - Matplotlib non-interactive plotting: `plot_training_history`, `plot_confusion_matrix`, `plot_roc_pr_curves`.
+6. **Automated Unit Tests (`tests/test_detector.py`)**:
+   - 4 new tests covering architecture shapes, checkpoint round-trip fidelity, metrics calculation, and batch inference.
+   - Total test suite now: **14 passed in 7.82s (100% pass rate)**.
+7. **Empirical Training Runs**:
+   - Successfully trained `efficientnet_b0` on RTX 4050 GPU (100% CUDA AMP).
+   - Successfully trained `resnet18` baseline on RTX 4050 GPU.
 
 ---
 
 ## Remaining Work and Next Phase Plan
-- **Next Phase: Phase 2 — Deepfake Detection Model and Training Pipeline**
-  - Implement `EfficientNet-B0` binary classification architecture with custom head (`models/detector.py`).
-  - Implement training loop with mixed precision (AMP), class weighting, early stopping, and checkpoint management (`models/train.py`, `models/checkpoint.py`).
-  - Implement inference API returning class probabilities, manipulation scores, and latency (`models/predict.py`).
-  - Validate model training and evaluation metrics (Accuracy, ROC-AUC, PR-AUC, F1, Confusion Matrix).
+- **Next Phase: Phase 3 — Video Forensics, Frame Analysis, and Temporal Evidence**
+  - Implement video-level forensic engine integrating `VideoProcessor` and `DeepfakeDetector`.
+  - Timestamp-associated frame predictions across sampled video frames.
+  - Video-level score aggregation policies: Mean, Median, and Top-K (peak manipulation suspicion).
+  - Temporal consistency analysis: frame-to-frame score variance and anomaly detection.
+  - Unit and integration tests for video forensics (`tests/test_aggregation.py`).
