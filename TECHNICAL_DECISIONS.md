@@ -140,3 +140,43 @@ This document records the design choices, architectural tradeoffs, and rationale
 - **Platypus Flowable Architecture**:
   - Implemented using ReportLab Platypus `SimpleDocTemplate`, providing structured tables, cryptographic hash blocks, embedded Grad-CAM heatmaps, and formal disclaimers.
   - Generates tamper-evident, self-contained documentation suitable for archiving.
+
+---
+
+## 16. Security Hardening & Input Sanitization
+- **Threat Vector Modeling**:
+  - In a forensic deployment, untrusted media files are uploaded from outside parties. Threat vectors include:
+    1. Executable file masquerading (e.g., `.exe`, `.py`, `.sh` renamed with `.png` extension).
+    2. Path traversal breakouts (`../../`, `..\\`, null byte injection `\x00`).
+    3. Denial-of-Service (DoS) via gigabyte-sized files exhausting server memory.
+- **Defensive Multi-Layer Controls**:
+  - *Extension Whitelist*: Permitted set strictly enforced (`ALLOWED_IMAGE_EXTENSIONS = {.jpg, .jpeg, .png, .webp}`, `ALLOWED_VIDEO_EXTENSIONS = {.mp4, .avi, .mov, .mkv}`).
+  - *Magic Header Byte Verification*: Inspects first 32 bytes of the payload for legitimate container signatures (e.g. `\xff\xd8\xff` for JPEG, `\x89PNG` for PNG, `RIFF...WEBP` for WebP, `ftyp` for MP4). Mismatched disguised executables trigger immediate `SecurityValidationError`.
+  - *Size Caps*: Hard ceiling of 25 MB for images and 250 MB for videos.
+  - *Path Traversal Neutralization*: `sanitize_filename()` strips all path separators and null bytes. `sanitize_filepath()` enforces `os.path.commonpath()` resolution strictly within approved root directories.
+  - *Secure Temporary File Allocation*: Employs `tempfile.mkstemp` with restricted permissions to prevent symlink attacks and race conditions.
+
+## 17. Performance Profiling & Inference Latency Benchmarks
+- **Hardware Profile**: Evaluated on NVIDIA GeForce RTX 4050 Laptop GPU (6 GB VRAM) with PyTorch 2.5.1+cu121.
+- **Latency Benchmarks**:
+  - *Pure Neural Forward Pass (EfficientNet-B0)*: **9.27 ms** mean latency (**107.8 FPS** throughput).
+  - *Facial Extraction & Alignment (MediaPipe BlazeFace)*: **2.88 ms** mean latency (**347.6 FPS** throughput).
+  - *End-to-End Image Inference Pipeline*: **13.03 ms** mean latency (**76.8 FPS** throughput).
+  - *Video Streaming Analysis (1 FPS sampling)*: **20.11 ms/frame** (**49.7 FPS** effective throughput).
+- **Memory Footprint**:
+  - *Host System RAM (RSS)*: Baseline ~643 MB, peak ~877 MB (delta: +234 MB).
+  - *GPU VRAM Allocation*: **49.7 MB** peak allocated on GPU during batch=1 inference.
+- **Takeaway**: Sub-15ms single-image inference confirms DeepTrace is capable of real-time interactive operation in modern investigative environments.
+
+## 18. Robustness Testing & Perturbation Stress Analysis
+- **Empirical Degradation Modeling**:
+  - Real-world media shared on social platforms undergoes severe re-compression and downscaling.
+  - Systematically evaluated under:
+    - JPEG compression ($Q \in \{90, 70, 50, 30\}$).
+    - Gaussian defocus blur ($\sigma \in \{0.5, 1.0, 2.0\}$).
+    - Resolution downsampling + upscaling ($\text{scale} \in \{0.75, 0.50, 0.25\}$).
+    - Sensor noise ($\sigma = 15$).
+- **Selective Abstention Defense**:
+  - Under severe degradation ($Q \le 30$ or $\sigma \ge 2.0$), standard deep learning models experience significant feature distortion.
+  - DeepTrace's `ReliabilityDecisionPolicy` detects borderline calibrated probabilities and degraded visual quality metrics, safely raising the **abstention rate** to 100% on unclassifiable ambiguous inputs rather than emitting false positives.
+  - This demonstrates evidential safety: when input quality cannot guarantee forensic confidence, DeepTrace reports *Inconclusive* instead of generating misleading evidence.

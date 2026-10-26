@@ -23,6 +23,13 @@ from forensic.quality import evaluate_face_quality
 from forensic.report import build_evidence_record, export_evidence_json, generate_forensic_pdf
 from explainability.gradcam import generate_explanation
 from evaluation.plots import plot_video_score_timeline
+from forensic.security import (
+    validate_file_upload,
+    create_secure_temp_file,
+    SecurityValidationError,
+    ALLOWED_IMAGE_EXTENSIONS,
+    ALLOWED_VIDEO_EXTENSIONS,
+)
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -114,10 +121,23 @@ def render_image_analysis_page(detector, scaler, policy):
     if uploaded_file is not None:
         file_bytes = uploaded_file.read()
 
-        # Save to temp file
-        with tempfile.NamedTemporaryFile(delete=False, suffix=f"_{uploaded_file.name}") as tmp:
+        # Defensive validation: check extension, size cap, and magic bytes
+        try:
+            val_info = validate_file_upload(
+                filename=uploaded_file.name,
+                file_bytes_or_stream=file_bytes,
+                allowed_extensions=ALLOWED_IMAGE_EXTENSIONS,
+                enforce_magic_bytes=True,
+            )
+        except SecurityValidationError as sec_err:
+            st.error(f"🛡️ **Security Validation Error**: {sec_err}")
+            render_legal_disclaimer()
+            return
+
+        # Secure temp file creation
+        fd, tmp_path = create_secure_temp_file(suffix=val_info["extension"])
+        with os.fdopen(fd, "wb") as tmp:
             tmp.write(file_bytes)
-            tmp_path = tmp.name
 
         col_img, col_info = st.columns([1, 1], gap="medium")
 
@@ -341,9 +361,24 @@ def render_video_analysis_page(analyzer, scaler, policy):
 
     if uploaded_vid is not None:
         vid_bytes = uploaded_vid.read()
-        with tempfile.NamedTemporaryFile(delete=False, suffix=f"_{uploaded_vid.name}") as tmp_v:
+
+        # Defensive validation: check extension, size cap, and magic bytes
+        try:
+            val_info = validate_file_upload(
+                filename=uploaded_vid.name,
+                file_bytes_or_stream=vid_bytes,
+                allowed_extensions=ALLOWED_VIDEO_EXTENSIONS,
+                enforce_magic_bytes=True,
+            )
+        except SecurityValidationError as sec_err:
+            st.error(f"🛡️ **Security Validation Error**: {sec_err}")
+            render_legal_disclaimer()
+            return
+
+        # Secure temp file creation
+        fd, tmp_vid_path = create_secure_temp_file(suffix=val_info["extension"])
+        with os.fdopen(fd, "wb") as tmp_v:
             tmp_v.write(vid_bytes)
-            tmp_vid_path = tmp_v.name
 
         # Correct Streamlit video API
         st.video(tmp_vid_path)
