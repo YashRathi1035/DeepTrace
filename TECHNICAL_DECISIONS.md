@@ -81,3 +81,25 @@ This document records the design choices, architectural tradeoffs, and rationale
 - **Lightweight IoU Tracking**:
   - Rather than loading heavy multi-object tracking neural nets that would strain laptop VRAM, DeepTrace implements an IoU-based bounding box tracker across sampled frames.
   - Detections with $\text{IoU} \ge 0.2$ are associated with the same face identity track, preventing cross-identity pollution in multi-subject scenes.
+
+---
+
+## 10. Explainable AI (Grad-CAM)
+- **Target Convolutional Layers**:
+  - *EfficientNet-B0*: `backbone.features[-1]` (`features.8`, 1280 channels, $7\times 7$ feature maps). This layer contains the richest spatial and semantic representation prior to global pooling.
+  - *ResNet-18*: `backbone.layer4[-1]` (512 channels, $7\times 7$ feature maps).
+- **Attribution Mathematics**:
+  - Gradients of the predicted class logit $y^c$ with respect to feature maps $A^k$ are computed:
+    $$\alpha_k^c = \frac{1}{Z} \sum_{i}\sum_{j} \frac{\partial y^c}{\partial A_{ij}^k}$$
+  - Saliency maps are formed via a ReLU rectified weighted sum:
+    $$L_{\text{Grad-CAM}}^c = \text{ReLU}\left( \sum_k \alpha_k^c A^k \right)$$
+  - ReLU explicitly isolates features that *increase* suspicion of class $c$ (manipulation), discarding features that diminish class confidence.
+- **Forensic Interpretation Constraint**:
+  - Grad-CAM heatmaps highlight regions where the network's convolutional filters fired strongly (e.g. eye boundaries, mouth blending seams, forehead hair boundary).
+  - DeepTrace documentation explicitly clarifies that **Grad-CAM heatmaps are explanations of model reasoning, NOT ground-truth pixel manipulation masks**.
+
+## 11. Tripartite Evidence Representation
+- To maintain evidentiary rigor and prevent misleading reports, all forensic outputs are partitioned into three distinct sections:
+  1. **Model-Generated Findings**: Quantitative outputs (raw logits, probabilities, frame score trajectories, Grad-CAM overlays).
+  2. **Physical Media & Container Observations**: Verifiable file properties (SHA-256 cryptographic hash, file size, codec, frame count, EXIF tags).
+  3. **Quality Warnings & Disclaimers**: Environmental limitations (blur, illumination, resolution warnings) and legal non-certification notices.
