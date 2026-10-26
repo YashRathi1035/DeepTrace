@@ -1,0 +1,62 @@
+system:
+  seed: 42
+  device: "cuda"  # Auto-fallback to "cpu" if CUDA is unavailable
+  mixed_precision: true
+  num_workers: 2
+  log_level: "INFO"
+
+paths:
+  raw_data_dir: "data/raw"
+  processed_data_dir: "data/processed"
+  manifests_dir: "data/manifests"
+  checkpoints_dir: "artifacts/checkpoints"
+  reports_dir: "artifacts/reports"
+  plots_dir: "artifacts/plots"
+  logs_dir: "artifacts/logs"
+
+preprocessing:
+  image_size: [224, 224]
+  normalize_mean: [0.485, 0.456, 0.406]
+  normalize_std: [0.229, 0.224, 0.225]
+  face_detector: "mediapipe"  # Options: 'mediapipe', 'opencv_yunet', 'opencv_haar'
+  face_margin: 0.20           # 20% bounding box expansion for context
+  min_face_confidence: 0.50
+  min_face_size: 40           # pixels
+
+video:
+  sampling_fps: 1.0           # Sample 1 frame per second
+  max_frames: 60              # Cap analysis to 60 frames per video for laptop VRAM / latency
+  max_duration_seconds: 300   # 5 minutes maximum
+  max_file_size_mb: 150       # 150MB upload limit
+  supported_formats: [".mp4", ".avi", ".mov", ".mkv"]
+
+model:
+  architecture: "efficientnet_b0"  # Primary baseline; alternative: 'resnet18'
+  num_classes: 2
+  labels: ["Real", "Manipulated"]
+  pretrained: true
+  dropout: 0.2
+  default_checkpoint: "artifacts/checkpoints/best_model.pt"
+
+training:
+  batch_size: 8
+  learning_rate: 0.0001
+  weight_decay: 0.00001
+  epochs: 10
+  early_stopping_patience: 3
+  val_split: 0.15
+  test_split: 0.15
+  class_weights: true         # Handle class imbalance
+
+reliability:
+  calibration_method: "temperature_scaling"
+  abstention:
+    fake_threshold: 0.65       # Above this -> Potentially Manipulated
+    real_threshold: 0.35       # Below this -> Likely Authentic
+    # Between 0.35 and 0.65 -> Inconclusive
+    min_face_quality_score: 0.40
+    min_face_resolution: 60    # px
+
+explainability:
+  gradcam_target_layer: "features.8"  # Final conv stage for EfficientNet-B0
+  colormap: "JET"

@@ -1,0 +1,40 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# Environments
+.venv/
+venv/
+ENV/
+env/
+
+# Data and Artifacts (Never commit raw datasets, checkpoints, private media)
+data/raw/
+data/processed/
+artifacts/checkpoints/*.pt
+artifacts/checkpoints/*.pth
+artifacts/reports/*.pdf
+artifacts/plots/*.png
+artifacts/logs/*.log
+!artifacts/checkpoints/.gitkeep
+!artifacts/reports/.gitkeep
+!artifacts/plots/.gitkeep
+!artifacts/logs/.gitkeep
+!data/raw/.gitkeep
+!data/processed/.gitkeep
+!data/manifests/.gitkeep
+
+# IDEs & OS files
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+
+# Test & coverage caches
+.pytest_cache/
+.coverage
+htmlcov/

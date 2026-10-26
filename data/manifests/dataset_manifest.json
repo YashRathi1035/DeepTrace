@@ -1,0 +1,117 @@
+{
+  "version": "1.0",
+  "seed": 42,
+  "total_samples": 10,
+  "samples": [
+    {
+      "image_path": "data/processed\\fake_vid_00_frame0_crop.jpg",
+      "video_id": "fake_vid_00",
+      "subject_id": "fake_vid_00",
+      "label": 1,
+      "manipulation_type": "synthetic_or_deepfake",
+      "timestamp": 0.0,
+      "frame_index": 0,
+      "source_media": "data/raw\\synthetic_fixture\\manipulated\\fake_vid_00_frame0.png",
+      "split": "train"
+    },
+    {
+      "image_path": "data/processed\\fake_vid_01_frame0_crop.jpg",
+      "video_id": "fake_vid_01",
+      "subject_id": "fake_vid_01",
+      "label": 1,
+      "manipulation_type": "synthetic_or_deepfake",
+      "timestamp": 0.0,
+      "frame_index": 0,
+      "source_media": "data/raw\\synthetic_fixture\\manipulated\\fake_vid_01_frame0.png",
+      "split": "train"
+    },
+    {
+      "image_path": "data/processed\\fake_vid_02_frame0_crop.jpg",
+      "video_id": "fake_vid_02",
+      "subject_id": "fake_vid_02",
+      "label": 1,
+      "manipulation_type": "synthetic_or_deepfake",
+      "timestamp": 0.0,
+      "frame_index": 0,
+      "source_media": "data/raw\\synthetic_fixture\\manipulated\\fake_vid_02_frame0.png",
+      "split": "val"
+    },
+    {
+      "image_path": "data/processed\\fake_vid_03_frame0_crop.jpg",
+      "video_id": "fake_vid_03",
+      "subject_id": "fake_vid_03",
+      "label": 1,
+      "manipulation_type": "synthetic_or_deepfake",
+      "timestamp": 0.0,
+      "frame_index": 0,
+      "source_media": "data/raw\\synthetic_fixture\\manipulated\\fake_vid_03_frame0.png",
+      "split": "test"
+    },
+    {
+      "image_path": "data/processed\\fake_vid_04_frame0_crop.jpg",
+      "video_id": "fake_vid_04",
+      "subject_id": "fake_vid_04",
+      "label": 1,
+      "manipulation_type": "synthetic_or_deepfake",
+      "timestamp": 0.0,
+      "frame_index": 0,
+      "source_media": "data/raw\\synthetic_fixture\\manipulated\\fake_vid_04_frame0.png",
+      "split": "train"
+    },
+    {
+      "image_path": "data/processed\\real_vid_00_frame0_crop.jpg",
+      "video_id": "real_vid_00",
+      "subject_id": "real_vid_00",
+      "label": 0,
+      "manipulation_type": "authentic",
+      "timestamp": 0.0,
+      "frame_index": 0,
+      "source_media": "data/raw\\synthetic_fixture\\real\\real_vid_00_frame0.png",
+      "split": "train"
+    },
+    {
+      "image_path": "data/processed\\real_vid_01_frame0_crop.jpg",
+      "video_id": "real_vid_01",
+      "subject_id": "real_vid_01",
+      "label": 0,
+      "manipulation_type": "authentic",
+      "timestamp": 0.0,
+      "frame_index": 0,
+      "source_media": "data/raw\\synthetic_fixture\\real\\real_vid_01_frame0.png",
+      "split": "train"
+    },
+    {
+      "image_path": "data/processed\\real_vid_02_frame0_crop.jpg",
+      "video_id": "real_vid_02",
+      "subject_id": "real_vid_02",
+      "label": 0,
+      "manipulation_type": "authentic",
+      "timestamp": 0.0,
+      "frame_index": 0,
+      "source_media": "data/raw\\synthetic_fixture\\real\\real_vid_02_frame0.png",
+      "split": "test"
+    },
+    {
+      "image_path": "data/processed\\real_vid_03_frame0_crop.jpg",
+      "video_id": "real_vid_03",
+      "subject_id": "real_vid_03",
+      "label": 0,
+      "manipulation_type": "authentic",
+      "timestamp": 0.0,
+      "frame_index": 0,
+      "source_media": "data/raw\\synthetic_fixture\\real\\real_vid_03_frame0.png",
+      "split": "val"
+    },
+    {
+      "image_path": "data/processed\\real_vid_04_frame0_crop.jpg",
+      "video_id": "real_vid_04",
+      "subject_id": "real_vid_04",
+      "label": 0,
+      "manipulation_type": "authentic",
+      "timestamp": 0.0,
+      "frame_index": 0,
+      "source_media": "data/raw\\synthetic_fixture\\real\\real_vid_04_frame0.png",
+      "split": "train"
+    }
+  ]
+}

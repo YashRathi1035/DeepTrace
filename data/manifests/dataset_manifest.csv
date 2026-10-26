@@ -1,0 +1,11 @@
+image_path,video_id,subject_id,label,manipulation_type,timestamp,frame_index,source_media,split
+data/processed\fake_vid_00_frame0_crop.jpg,fake_vid_00,fake_vid_00,1,synthetic_or_deepfake,0.0,0,data/raw\synthetic_fixture\manipulated\fake_vid_00_frame0.png,train
+data/processed\fake_vid_01_frame0_crop.jpg,fake_vid_01,fake_vid_01,1,synthetic_or_deepfake,0.0,0,data/raw\synthetic_fixture\manipulated\fake_vid_01_frame0.png,train
+data/processed\fake_vid_02_frame0_crop.jpg,fake_vid_02,fake_vid_02,1,synthetic_or_deepfake,0.0,0,data/raw\synthetic_fixture\manipulated\fake_vid_02_frame0.png,val
+data/processed\fake_vid_03_frame0_crop.jpg,fake_vid_03,fake_vid_03,1,synthetic_or_deepfake,0.0,0,data/raw\synthetic_fixture\manipulated\fake_vid_03_frame0.png,test
+data/processed\fake_vid_04_frame0_crop.jpg,fake_vid_04,fake_vid_04,1,synthetic_or_deepfake,0.0,0,data/raw\synthetic_fixture\manipulated\fake_vid_04_frame0.png,train
+data/processed\real_vid_00_frame0_crop.jpg,real_vid_00,real_vid_00,0,authentic,0.0,0,data/raw\synthetic_fixture\real\real_vid_00_frame0.png,train
+data/processed\real_vid_01_frame0_crop.jpg,real_vid_01,real_vid_01,0,authentic,0.0,0,data/raw\synthetic_fixture\real\real_vid_01_frame0.png,train
+data/processed\real_vid_02_frame0_crop.jpg,real_vid_02,real_vid_02,0,authentic,0.0,0,data/raw\synthetic_fixture\real\real_vid_02_frame0.png,test
+data/processed\real_vid_03_frame0_crop.jpg,real_vid_03,real_vid_03,0,authentic,0.0,0,data/raw\synthetic_fixture\real\real_vid_03_frame0.png,val
+data/processed\real_vid_04_frame0_crop.jpg,real_vid_04,real_vid_04,0,authentic,0.0,0,data/raw\synthetic_fixture\real\real_vid_04_frame0.png,train
