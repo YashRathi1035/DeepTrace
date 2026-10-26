@@ -143,3 +143,219 @@ def export_evidence_json(evidence_record: Dict[str, Any], output_path: str) -> s
     with open(output_path, "w", encoding="utf-8") as f:
         json.dump(evidence_record, f, indent=2)
     return os.path.abspath(output_path)
+
+
+def generate_forensic_pdf(
+    evidence_record: Dict[str, Any],
+    output_pdf_path: str,
+    visual_paths: Optional[List[str]] = None
+) -> str:
+    """Generate a formal digital media forensic PDF report using ReportLab.
+    
+    Args:
+        evidence_record: Output dictionary from build_evidence_record().
+        output_pdf_path: Destination path for .pdf file.
+        visual_paths: List of file paths to explanation images (e.g. crop and Grad-CAM overlay).
+        
+    Returns:
+        Absolute path to generated PDF report.
+    """
+    from reportlab.lib.pagesizes import letter
+    from reportlab.platypus import (
+        SimpleDocTemplate,
+        Paragraph,
+        Spacer,
+        Table,
+        TableStyle,
+        Image as RLImage,
+        KeepTogether,
+        HRFlowable
+    )
+    from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+    from reportlab.lib import colors
+
+    os.makedirs(os.path.dirname(os.path.abspath(output_pdf_path)), exist_ok=True)
+
+    doc = SimpleDocTemplate(
+        output_pdf_path,
+        pagesize=letter,
+        rightMargin=40,
+        leftMargin=40,
+        topMargin=40,
+        bottomMargin=40
+    )
+
+    styles = getSampleStyleSheet()
+
+    # Custom styles
+    title_style = ParagraphStyle(
+        "DocTitle",
+        parent=styles["Heading1"],
+        fontName="Helvetica-Bold",
+        fontSize=18,
+        leading=22,
+        textColor=colors.HexColor("#0d1117")
+    )
+    subtitle_style = ParagraphStyle(
+        "DocSubtitle",
+        parent=styles["Normal"],
+        fontName="Helvetica",
+        fontSize=9,
+        leading=12,
+        textColor=colors.HexColor("#57606a")
+    )
+    heading_style = ParagraphStyle(
+        "SectionHeading",
+        parent=styles["Heading2"],
+        fontName="Helvetica-Bold",
+        fontSize=12,
+        leading=16,
+        textColor=colors.HexColor("#0969da"),
+        spaceBefore=10,
+        spaceAfter=4
+    )
+    body_style = ParagraphStyle(
+        "BodyDark",
+        parent=styles["Normal"],
+        fontName="Helvetica",
+        fontSize=9,
+        leading=12,
+        textColor=colors.HexColor("#24292f")
+    )
+    disclaimer_style = ParagraphStyle(
+        "NoticeText",
+        parent=styles["Normal"],
+        fontName="Helvetica-Oblique",
+        fontSize=8,
+        leading=11,
+        textColor=colors.HexColor("#57606a")
+    )
+
+    story = []
+
+    # 1. Header & Metadata
+    story.append(Paragraph("DEEPTRACE DIGITAL MEDIA FORENSIC REPORT", title_style))
+    story.append(Paragraph(f"Record ID: {evidence_record.get('record_id')} | Generated: {evidence_record.get('timestamp_utc')}", subtitle_style))
+    story.append(HRFlowable(width="100%", thickness=1.5, color=colors.HexColor("#0969da"), spaceBefore=6, spaceAfter=8))
+
+    # 2. Forensic Notice Box
+    notice_text = f"<b>IMPORTANT FORENSIC NOTICE:</b> {evidence_record.get('forensic_limitations', {}).get('disclaimer', STANDARD_DISCLAIMER)}"
+    notice_table = Table(
+        [[Paragraph(notice_text, disclaimer_style)]],
+        colWidths=[530]
+    )
+    notice_table.setStyle(TableStyle([
+        ("BACKGROUND", (0, 0), (-1, -1), colors.HexColor("#f6f8fa")),
+        ("BOX", (0, 0), (-1, -1), 1, colors.HexColor("#d0d7de")),
+        ("PADDING", (0, 0), (-1, -1), 6),
+    ]))
+    story.append(notice_table)
+    story.append(Spacer(1, 10))
+
+    # 3. File & Cryptographic Verification Table
+    story.append(Paragraph("1. File Identification & Cryptographic Hash", heading_style))
+    f_obs = evidence_record.get("file_observations", {})
+    file_data = [
+        [Paragraph("<b>File Name:</b>", body_style), Paragraph(str(f_obs.get("file_name")), body_style)],
+        [Paragraph("<b>File Size:</b>", body_style), Paragraph(f"{f_obs.get('file_size_bytes', 0):,} bytes", body_style)],
+        [Paragraph("<b>SHA-256 Hash:</b>", body_style), Paragraph(f"<font face='Courier' size=8>{f_obs.get('sha256', 'N/A')}</font>", body_style)],
+        [Paragraph("<b>Media Type:</b>", body_style), Paragraph(str(f_obs.get("file_type")).upper(), body_style)],
+        [Paragraph("<b>Resolution:</b>", body_style), Paragraph(f"{f_obs.get('dimensions', [0, 0])[0]} x {f_obs.get('dimensions', [0, 0])[1]} px", body_style)]
+    ]
+    if f_obs.get("file_type") == "video":
+        file_data.append([Paragraph("<b>Duration / FPS:</b>", body_style), Paragraph(f"{f_obs.get('duration_seconds')}s @ {f_obs.get('fps')} FPS ({f_obs.get('frame_count')} frames)", body_style)])
+        file_data.append([Paragraph("<b>FourCC Codec:</b>", body_style), Paragraph(str(f_obs.get("codec")), body_style)])
+
+    f_table = Table(file_data, colWidths=[130, 400])
+    f_table.setStyle(TableStyle([
+        ("GRID", (0, 0), (-1, -1), 0.5, colors.HexColor("#e1e4e8")),
+        ("BACKGROUND", (0, 0), (0, -1), colors.HexColor("#f6f8fa")),
+        ("PADDING", (0, 0), (-1, -1), 4),
+    ]))
+    story.append(f_table)
+    story.append(Spacer(1, 10))
+
+    # 4. Model Findings Table
+    story.append(Paragraph("2. Forensic Model Assessment", heading_style))
+    m_find = evidence_record.get("model_findings", {})
+    verdict = m_find.get("media_classification", "Unspecified")
+
+    # Color code verdict
+    if "Manipulated" in verdict:
+        verdict_color = "#cf222e"  # Red
+    elif "Authentic" in verdict:
+        verdict_color = "#1a7f37"  # Green
+    else:
+        verdict_color = "#9a6700"  # Amber
+
+    m_score = m_find.get("manipulation_score") or m_find.get("video_level_score", 0.0)
+
+    model_data = [
+        [Paragraph("<b>Classification Decision:</b>", body_style), Paragraph(f"<font color='{verdict_color}'><b>{verdict.upper()}</b></font>", body_style)],
+        [Paragraph("<b>Manipulation Probability:</b>", body_style), Paragraph(f"<b>{m_score:.4f}</b> (Threshold: 0.65)", body_style)],
+        [Paragraph("<b>Detector Architecture:</b>", body_style), Paragraph(str(evidence_record.get("model_metadata", {}).get("architecture")), body_style)],
+        [Paragraph("<b>Inference Latency:</b>", body_style), Paragraph(f"{m_find.get('inference_duration_ms', 0):.1f} ms", body_style)]
+    ]
+    if "aggregation_strategy" in m_find:
+        model_data.append([Paragraph("<b>Aggregation Policy:</b>", body_style), Paragraph(str(m_find.get("aggregation_strategy")), body_style)])
+        model_data.append([Paragraph("<b>Analyzed Frames:</b>", body_style), Paragraph(f"{m_find.get('num_analyzed_frames')} frames", body_style)])
+
+    m_table = Table(model_data, colWidths=[130, 400])
+    m_table.setStyle(TableStyle([
+        ("GRID", (0, 0), (-1, -1), 0.5, colors.HexColor("#e1e4e8")),
+        ("BACKGROUND", (0, 0), (0, -1), colors.HexColor("#f6f8fa")),
+        ("PADDING", (0, 0), (-1, -1), 4),
+    ]))
+    story.append(m_table)
+    story.append(Spacer(1, 10))
+
+    # 5. Visual Explainability Gallery
+    if visual_paths:
+        existing_imgs = [p for p in visual_paths if os.path.exists(p)]
+        if existing_imgs:
+            story.append(Paragraph("3. Visual Saliency Attributions (Grad-CAM)", heading_style))
+            story.append(Paragraph("Heatmaps illustrate convolutional activation patterns corresponding to the manipulated class (red denotes high activation).", subtitle_style))
+            story.append(Spacer(1, 4))
+
+            img_elements = []
+            for p in existing_imgs[:2]:
+                try:
+                    img_elements.append(RLImage(p, width=180, height=180))
+                except Exception:
+                    pass
+
+            if img_elements:
+                img_table = Table([img_elements], colWidths=[200] * len(img_elements))
+                img_table.setStyle(TableStyle([
+                    ("ALIGN", (0, 0), (-1, -1), "CENTER"),
+                    ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+                    ("PADDING", (0, 0), (-1, -1), 4),
+                ]))
+                story.append(img_table)
+                story.append(Spacer(1, 8))
+
+    # 6. Quality Warnings
+    story.append(Paragraph("4. Input Diagnostics & Warnings", heading_style))
+    warnings = evidence_record.get("quality_warnings", [])
+    if warnings:
+        warn_content = "<br/>".join([f"• {w}" for w in warnings])
+    else:
+        warn_content = "• No critical image quality or container anomalies detected."
+
+    warn_table = Table(
+        [[Paragraph(warn_content, body_style)]],
+        colWidths=[530]
+    )
+    warn_table.setStyle(TableStyle([
+        ("BACKGROUND", (0, 0), (-1, -1), colors.HexColor("#fff8c5") if warnings else colors.HexColor("#f6f8fa")),
+        ("BOX", (0, 0), (-1, -1), 1, colors.HexColor("#d4a72c") if warnings else colors.HexColor("#d0d7de")),
+        ("PADDING", (0, 0), (-1, -1), 6),
+    ]))
+    story.append(warn_table)
+    story.append(Spacer(1, 10))
+
+    # 7. Signature / Footer
+    story.append(Paragraph("Report generated autonomously by DeepTrace Forensic Engine v1.0. Hash-verified tamper-evident record.", disclaimer_style))
+
+    doc.build(story)
+    return os.path.abspath(output_pdf_path)

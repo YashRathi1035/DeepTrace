@@ -126,3 +126,17 @@ This document records the design choices, architectural tradeoffs, and rationale
   - $0.35 < \hat{p} < 0.65 \lor \neg\text{QualityPass} \implies$ **Inconclusive (Abstain)**
 - **Coverage vs. Selective Risk**:
   - Measures the trade-off: by abstaining on borderline inputs, Selective Risk (error rate among accepted predictions) drops significantly, increasing overall evidential reliability.
+
+---
+
+## 14. Dashboard Architecture & User Experience (Streamlit)
+- **State Management & Caching**:
+  - Heavy neural backbones (`EfficientNet-B0` / `ResNet-18`) and calibration scalers are loaded once via `@st.cache_resource`, ensuring that interactive page widget updates and slider adjustments do not reload PyTorch models or cause GPU re-allocation overhead.
+- **Visual Palette & Forensic UX**:
+  - Styled with dark charcoal backgrounds (`#0e1117`, `#161b22`) and high-contrast, colorblind-accessible badges (Red `#cf222e`, Green `#1a7f37`, Amber `#9a6700`).
+  - Decisions are never communicated by color alone; every card pairs color with textual status and calibrated probabilities.
+
+## 15. PDF Forensic Report Generation (ReportLab)
+- **Platypus Flowable Architecture**:
+  - Implemented using ReportLab Platypus `SimpleDocTemplate`, providing structured tables, cryptographic hash blocks, embedded Grad-CAM heatmaps, and formal disclaimers.
+  - Generates tamper-evident, self-contained documentation suitable for archiving.

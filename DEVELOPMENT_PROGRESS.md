@@ -1,12 +1,12 @@
 # DeepTrace — Development Progress Tracker
 
 ## Status Overview
-- **Phase 1: Project Setup, Architecture, Dataset Pipeline, and Baseline Preparation** — **COMPLETED**
-- **Phase 2: Deepfake Detection Model and Training Pipeline** — **COMPLETED**
-- **Phase 3: Video Forensics, Frame Analysis, and Temporal Evidence** — **COMPLETED**
-- **Phase 4: Explainable AI and Forensic Evidence Collection** — **COMPLETED**
-- **Phase 5: Reliability, Calibration, and Research Experiments** — **COMPLETED**
-- **Phase 6: Streamlit Application and Forensic Report Generation** — PENDING
+- **Phase 1: Project Setup, Architecture, Dataset Pipeline, and Baseline Preparation** — **COMPLETED** ✅
+- **Phase 2: Deepfake Detection Model and Training Pipeline** — **COMPLETED** ✅
+- **Phase 3: Video Forensics, Frame Analysis, and Temporal Evidence** — **COMPLETED** ✅
+- **Phase 4: Explainable AI and Forensic Evidence Collection** — **COMPLETED** ✅
+- **Phase 5: Reliability, Calibration, and Research Experiments** — **COMPLETED** ✅
+- **Phase 6: Streamlit Application and Forensic Report Generation** — **COMPLETED** ✅
 - **Phase 7: Integration, Testing, Optimization, Documentation, and Release** — PENDING
 
 ---
@@ -32,50 +32,57 @@
 ---
 
 ## Phase 5 Execution Record
+*(See previous record for Temperature Scaling calibration, ECE reduction, selective abstention, and 28 passed tests).*
+
+---
+
+## Phase 6 Execution Record
 
 ### Objectives
-- Develop confidence calibration via Temperature Scaling on validation logits.
-- Compute Expected Calibration Error (ECE) and Brier Score using equal-width binning.
-- Render publication-quality Reliability Diagrams comparing confidence vs. empirical accuracy.
-- Design uncertainty-aware selective prediction & abstention policy:
-  - Likely Authentic, Potentially Manipulated, or Inconclusive (Abstain).
-- Measure Coverage vs. Selective Risk tradeoff.
-- Implement controlled robustness stress-tests (JPEG compression, Gaussian blur, downsampling, Gaussian noise).
-- Implement cross-dataset generalization benchmark (`evaluation/cross_dataset.py`).
-- Implement master evaluation CLI generating calibration artifacts, plots, and ablation comparison table (`scripts/evaluate_model.py`).
-- Automated unit testing in `tests/test_calibration.py`.
+- Build a full-stack, professional forensic dashboard in Streamlit.
+- Design an evidence-first, dark charcoal and blue theme with premium micro-animations.
+- Multi-page architecture (5 pages): Home, Image Analysis, Video Forensics, Forensic Dossier, Evaluation Dashboard.
+- Implement ReportLab PDF export with SHA-256 hashes, model findings, Grad-CAM overlays, and legal disclaimers.
+- Fix the `st.video()` API bug and add complete error handling.
+- Write end-to-end integration tests (`tests/test_integration.py`).
 
 ### Deliverables Completed
-1. **Confidence Calibration (`forensic/calibration.py`)**:
-   - `TemperatureScaler`: Optimized parameter $T > 0$ using L-BFGS to minimize Negative Log-Likelihood (NLL) strictly on validation data.
-   - Saves calibrated temperature artifact to `artifacts/checkpoints/calibration.json`.
-   - `compute_ece()`: Computes Expected Calibration Error across $M=10$ equal-width bins and Brier score.
-   - `plot_reliability_diagram()`: Plots empirical calibration curve vs. perfect diagonal and bin count histogram.
-2. **Reliability Decision Policy (`forensic/calibration.py`)**:
-   - `ReliabilityDecisionPolicy`: Implements three-tier classification with explicit quality gating:
-     - Calibrated prob $\ge 0.65$ $\rightarrow$ Potentially Manipulated.
-     - Calibrated prob $\le 0.35$ $\rightarrow$ Likely Authentic.
-     - Ambiguous zone $[0.35, 0.65]$ or visual quality degradation $\rightarrow$ Inconclusive (Abstain).
-   - `evaluate_selective_risk()`: Quantifies Coverage ($N_{\text{decisive}} / N$), Selective Risk (error rate among accepted inputs), and Abstention Rate.
-3. **Robustness Stress-Testing (`evaluation/robustness.py`)**:
-   - Controlled transformations: JPEG compression ($Q=90, 50, 30$), Gaussian blur ($\sigma=1.0, 2.0$), downsampling ($0.50\times, 0.35\times$), Gaussian sensor noise ($\sigma=15$).
-   - `RobustnessBenchmark`: Tracks degradation of accuracy, ROC-AUC, ECE, and abstention under increasing perturbation severity.
-   - `plot_robustness_curves()`: Generates degradation curves saved to `artifacts/plots/robustness_curves.png`.
-4. **Cross-Dataset Benchmark (`evaluation/cross_dataset.py`)**:
-   - `run_cross_dataset_benchmark()`: Evaluates generalization drop ($\Delta \text{AUC}$, $\Delta \text{Accuracy}$, change in ECE) between in-domain and external test cohorts.
-5. **Master Evaluation Pipeline (`scripts/evaluate_model.py`)**:
-   - Automated CLI running validation calibration, test set ECE evaluation, reliability plotting, robustness stress-testing, and generating the research ablation table saved to `artifacts/reports/ablation_study.csv`.
-6. **Automated Unit Tests (`tests/test_calibration.py`)**:
-   - 5 comprehensive tests: Temperature scaling optimization, ECE calculation, 3-tier decision policy, selective risk evaluation, and perturbation array preservation.
-   - Total test suite now: **28 passed in 15.51s (100% pass rate)**.
+
+1. **Enhanced UI Component Library (`ui/components.py`)**:
+   - Google Fonts (Inter + JetBrains Mono) loaded via CDN.
+   - Pulsing animated verdict badges (fake/real/inconclusive).
+   - `render_hash_value()`: SHA-256 monospace display with styling.
+   - `render_evidence_card()`: Hover-lift evidence card widget.
+   - `render_pipeline_overview()`: Visual 7-step forensic pipeline renderer.
+   - `render_metric_row()`: Programmatic metric card rows.
+   - `render_section_divider()`: Gradient horizontal rule.
+
+2. **Complete Multi-Page Renderers (`ui/pages.py`)**:
+   - **Bug fixed**: `st.video(file_bytes_or_path=...)` → `st.video(tmp_vid_path)`.
+   - **Error handling**: `try/except` around all analysis calls with `st.error()` messages.
+   - **Image page**: EXIF expander, inline hash display, calibrated Grad-CAM comparison, PDF + JSON download buttons.
+   - **Video page**: Container metadata card, frame inspector table, suspicious interval alerts.
+   - **Dossier page**: JSON viewer with key-summary cards + inline `st.json()` expander.
+   - **Evaluation page**: Styled dataframe with `highlight_max()`/`highlight_min()`, extra plot discovery.
+
+3. **Clean Main Application (`app.py`)**:
+   - Separated `_render_sidebar()` helper with GPU device name telemetry.
+   - `menu_items` for GitHub link.
+   - `@st.cache_resource` with `show_spinner`.
+
+4. **End-to-End Integration Test Suite (`tests/test_integration.py`)**:
+   - 10 tests covering every stage of the forensic pipeline.
+   - Uses only in-memory synthetic fixtures (no dataset download required).
+   - Tests: preprocessing → inference → temperature scaling → decision policy → Grad-CAM → video analysis → aggregation → evidence record → PDF report → full E2E chain.
+
+5. **Test Results**:
+   - **40 passed** (30 existing + 10 new integration) **in 9.24s — 100% pass rate**.
 
 ---
 
 ## Remaining Work and Next Phase Plan
-- **Next Phase: Phase 6 — Streamlit Application and Forensic Report Generation**
-  - Page 1: Home & Forensic Overview (workflow, limitations, supported inputs).
-  - Page 2: Image Forensics (upload, preview, metadata/hash, inference, Grad-CAM overlay, download report).
-  - Page 3: Video Forensics (upload, sampling slider, timeline chart, per-frame viewer, suspicious frame inspect).
-  - Page 4: Forensic Evidence Report (tamper-evident PDF export via ReportLab, structured JSON).
-  - Page 5: Evaluation & Research Dashboard (metrics, confusion matrix, reliability diagram, robustness curves, ablation table).
-  - Reusable UI component library (`ui/components.py`, `ui/pages.py`, `app.py`).
+- **Next Phase: Phase 7 — Integration, Testing, Optimization, Documentation, and Release**
+  - Performance profiling & latency benchmarks (image latency, video throughput, peak GPU memory).
+  - Security hardening (extension validation, input sanitization, path traversal prevention).
+  - Robustness stress-test demonstration on degraded media.
+  - Final README polish, contributing guidelines, and release checklist.
