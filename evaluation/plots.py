@@ -120,3 +120,61 @@ def plot_roc_pr_curves(
     plt.tight_layout()
     plt.savefig(pr_path, dpi=200)
     plt.close(fig)
+
+
+def plot_video_score_timeline(
+    timestamps: List[float],
+    scores: List[float],
+    video_level_score: float,
+    threshold: float,
+    suspicious_intervals: List[Dict[str, Any]],
+    output_path: str
+) -> str:
+    """Generate diagnostic forensic timeline plot of per-frame manipulation scores over time.
+    
+    Args:
+        timestamps: Timestamps in seconds.
+        scores: Frame-level manipulation probabilities.
+        video_level_score: Aggregated video manipulation score.
+        threshold: Threshold distinguishing authentic from suspicious.
+        suspicious_intervals: Identified intervals where manipulation probability exceeded threshold.
+        output_path: Destination path for saved PNG.
+        
+    Returns:
+        Absolute path to saved plot image.
+    """
+    os.makedirs(os.path.dirname(os.path.abspath(output_path)), exist_ok=True)
+
+    fig, ax = plt.subplots(figsize=(10, 4.5))
+
+    ts_arr = np.array(timestamps)
+    scores_arr = np.array(scores)
+
+    # Shaded background intervals for suspicious zones
+    for interval in suspicious_intervals:
+        ax.axvspan(
+            interval["start_seconds"],
+            interval["end_seconds"],
+            color="#d62728",
+            alpha=0.18,
+            label="Suspicious Segment" if interval == suspicious_intervals[0] else ""
+        )
+
+    # Frame score plot
+    ax.plot(ts_arr, scores_arr, "o-", color="#1f77b4", lw=2, markersize=5, label="Frame Manipulation Score")
+
+    # Threshold and aggregated reference lines
+    ax.axhline(threshold, color="#ff7f0e", linestyle="--", lw=1.5, label=f"Decision Threshold ({threshold:.2f})")
+    ax.axhline(video_level_score, color="#2ca02c", linestyle="-.", lw=1.8, label=f"Video Score ({video_level_score:.2f})")
+
+    ax.set_ylim([-0.05, 1.05])
+    ax.set_xlabel("Video Timestamp (seconds)", fontsize=11)
+    ax.set_ylabel("Manipulation Probability", fontsize=11)
+    ax.set_title("Forensic Video Score Timeline & Temporal Dynamics", fontsize=12, fontweight="bold")
+    ax.grid(True, linestyle=":", alpha=0.6)
+    ax.legend(loc="upper right", framealpha=0.9)
+
+    plt.tight_layout()
+    plt.savefig(output_path, dpi=200)
+    plt.close(fig)
+    return os.path.abspath(output_path)

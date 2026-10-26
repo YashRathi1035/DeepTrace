@@ -56,3 +56,28 @@ This document records the design choices, architectural tradeoffs, and rationale
   - Checkpoint saving prioritizes **validation ROC-AUC** and validation loss rather than raw training accuracy to prevent overfitting.
 - **Multiplatform Worker Safety**:
   - On Windows, `DataLoader(num_workers=0)` is used as the default for training scripts to eliminate Windows process spawning deadlocks.
+
+---
+
+## 7. Video Score Aggregation Strategy
+- **Failure Modes of Standard Mean/Median Aggregation**:
+  - In real-world deepfakes (e.g. face swaps or expression reenactment), attackers frequently manipulate only a fraction of the video (e.g., 2–5 seconds out of 30 seconds).
+  - Arithmetic **Mean** dilutes brief manipulations by averaging them with dozens of authentic frames, leading to dangerous false negatives.
+  - **Median** is even worse for localized tampering: if 80% of frames are authentic, the median will report ~0.10 probability even if the remaining 20% are obvious deepfakes.
+- **Top-K Forensic Aggregation (Default)**:
+  - DeepTrace adopts **Top-K aggregation** (`top_k_ratio = 0.20`), computing the average probability over the top 20% most suspicious frames.
+  - This ensures high sensitivity to localized manipulation while still suppressing single-frame false positives (e.g. from an isolated compression glitch or detector failure).
+
+## 8. Temporal Consistency & Volatility Metrics
+- **Forensic Interpretation Caveats**:
+  - Score volatility across consecutive frames is measured via variance, standard deviation, and maximum consecutive delta ($|s_t - s_{t-1}|$).
+  - However, DeepTrace **explicitly avoids** treating score fluctuations as definitive proof of temporal manipulation. Sudden score shifts can equally arise from:
+    1. Rapid camera panning or motion blur.
+    2. Extreme head pose changes (profile vs. frontal face).
+    3. Lighting transitions or lens flares.
+  - Detected suspicious intervals ($s_t \ge 0.65$) are captured as structured time intervals (`start_seconds`, `end_seconds`, `peak_score`) for timeline inspection.
+
+## 9. Multi-Face Association
+- **Lightweight IoU Tracking**:
+  - Rather than loading heavy multi-object tracking neural nets that would strain laptop VRAM, DeepTrace implements an IoU-based bounding box tracker across sampled frames.
+  - Detections with $\text{IoU} \ge 0.2$ are associated with the same face identity track, preventing cross-identity pollution in multi-subject scenes.
